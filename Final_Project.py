@@ -68,8 +68,22 @@ add_item("Mouse", 10)
 view_inventory()
 '''
 
+def get_player_input(prompt):
+    """
+    Handles player input and checks for 'inventory' keyword.
+    """
+    while True:
+        choice = input(prompt).strip().lower()
+        if choice == "inventory" or "i":
+            player.view_inventory()
+        else:
+            return choice
+
 
 def intro():
+    '''
+
+    '''
     ##print(get_quote())
     print("#############################################")
     print("#                                           #")
@@ -86,12 +100,12 @@ def intro():
     player.add_item("Map", 1)
     player.add_currency(100)
     print("Torch, Map, and 100 Gold Coins added to inventory")
-    print("Torch, Map, and 100 Gold Coins added to inventory")
+    print("You can check your inventory by typing 'inventory' or  'i'. ")
     print("You are at the entrace to a cave. You can either go into the cave or exit and travel north.\n")
-    choice = input("").strip().lower()
-    if choice == "enter cave":
+    choice = input("Enter 'Cave' or 'North'. ").strip().lower()
+    if choice == "cave":
         cave_interior()
-    elif choice == "travel north":
+    elif choice == "north":
         village()
     else:
         print("That wasn't a valid option. Try again.")
@@ -117,10 +131,16 @@ def cave_interior():
     print("As you travel into the cave you see a couple of skeletons of other adventures that have activated traps here and died." \
     "")
     print("You encounter a Goblin dude.")
-    choice = input("you wanna fight or flee bruh?").strip().lower()
-    if choice == "Fight":
-        combat(goblin)
-    elif choice == "Amulet":
+    choice = input("you wanna fight or flee bruh?: ").strip().lower()
+    if choice == "fight":
+        if combat(player, goblin):
+            print("You found a Healing Potion on the Goblin!")
+            player.add_item("Healing Potion", 1)
+            cave_floor2()
+        else: 
+            print("GAME OVER.")
+    elif choice == "flee":
+        print("You flee like a bitch and instead got to the village")
         village()
     else:
         print("That wasn't a valid option. Try again.")
@@ -130,15 +150,25 @@ def cave_floor2():
     '''
     Deeper section of cave. After this point the player will be traped in the Cave. 
     '''
-    print("You go deeper into the cave and encouter a freaking dragon.")
-    combat(player, golem)
+    print("As you go deeper into the cave, the ground shakes and the hallway behind you collaspes.")
+    print("A statue in front of you comes to life and starts to attack you.")
+    if combat(player, golem):
+        print("You found a Healing Potion on the Goblin!")
+        player.add_item("Healing Potion", 1)
+        cave_floor2()
+    else:
+        print("GAME OVER")
 
 def cave_final_floor():
     '''
     This is going to be the final floor of the Cave, and contains the final boss.
     '''
-    print("This is the final floor of the cave ")
-    combat(player, skeleKing)
+    print("This is the final floor of the cave. The Skeleton King awaits.")
+    if combat(player, skeleKing):
+        print("You obtained the Skeleton Crown! You win!")
+        player.add_item("Skeleton Crown", 1)
+    else:
+        print("GAME OVER")
 
 
 
@@ -152,6 +182,7 @@ def village ():
     choice = input("Do you want the Sword(100)? or Amulet(60)?").strip().lower()
     if choice == "sword":
         player.add_item("Sword", 1)
+
     elif choice == "amulet":
         player.add_item("Amulet", 1)
     else:
@@ -171,15 +202,20 @@ def forest ():
     Player encouters a dragon and has a chance to get treasure. Player is encouraged to go back to cave.
     '''
     print("You go into the forest and encounter a dragon on your journey")
-    combat(player, dragon)
+    if combat(player, dragon):
+        print("You found a Dragon Scale and 200 Gold!")
+        player.add_item("Dragon Scale", 1)
+        player.add_currency(200)
+    else:
+        print("GAME OVER")
+    
+
     
 
 def combat(player, enemy):
-    '''
-    Method for when player engages in combat. Works on a dice based system. 
-    If player gets sword, chances to do damage goes up.
-
-    '''
+    """
+    Handles combat and returns True if player wins, False if they die.
+    """
     print(f"\nYou encounter a {enemy.name} with {enemy.health} HP!")
 
     while enemy.is_alive() and player.hp > 0:
@@ -202,12 +238,13 @@ def combat(player, enemy):
 
     if player.hp <= 0:
         print("You were defeated.")
+        return False
     else:
         print(f"You defeated the {enemy.name}!")
+        return True
 
 
 def get_quote():
-
     '''
     
     '''
@@ -233,5 +270,6 @@ def get_quote():
 
 def main_game_loop():
     intro()
+
 if __name__ == "__main__":
     main_game_loop()
