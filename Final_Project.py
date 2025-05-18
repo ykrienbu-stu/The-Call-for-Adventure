@@ -3,7 +3,7 @@
 import requests
 ##from bs4 import BeautifulSoup
 import random
-
+import sys
 
 #Global Player State
 class Player:
@@ -18,6 +18,17 @@ class Player:
     
     def add_currency(self, amount):
         self.currency += amount
+        print(f"{amount} gold coins added to inventory")
+
+    def subtract_currency(self, amount):
+        if self.currency >= amount:
+            self.currency -= amount
+            print(f"{amount} gold spent.")
+            return True
+        else:
+            print("Not enough gold!")
+            return False
+
 
     def show_currency(self):
         print(f'Currency: {self.currency}')
@@ -30,12 +41,23 @@ class Player:
         print(f"{quantity} {item_name}(s) added to inventory.")
 
     def view_inventory(self):
+        print(f"\nCurrency: {self.currency} Gold")
         if self.inventory:
             print("Current Inventory:")
             for item_name, details in self.inventory.items():
                 print(f"- {item_name}: Quantity - {details['quantity']}")
         else:
             print("Inventory is empty.")
+
+    def use_healing_potion(self):
+        if "Healing Potion" in self.inventory and self.inventory["Healing Potion"]["quantity"] > 0:
+            self.hp = min(self.max_hp, self.hp + 50)
+            self.inventory["Healing Potion"]["quantity"] -= 1
+            print("You used a Healing Potion! +50 HP.")
+            print(f"Your HP is now {self.hp}/{self.max_hp}")
+        else:
+            print("You don't have any Healing Potions!")
+
 
 class Enemy:
     def __init__(self, name, health, attack):
@@ -53,20 +75,23 @@ dragon = Enemy("Dragon", 100, 15)
 golem = Enemy("Golem", 60, 10)
 skeleKing = Enemy("Skeleton King", 200, 20)
 
-    
+# Example usage
 '''        
 player = Player()
 player.add_currency(10)
 player.show_currency()  # => Currency: 10
 player.add_item()
 inventory = {}
-'''
-# Example usage
-'''
+
 add_item("Laptop", 5)
 add_item("Mouse", 10)
 view_inventory()
 '''
+
+def quit_game():
+    print("Thanks for playing! Goodbye, adventurer.")
+    sys.exit() 
+
 
 def get_player_input(prompt):
     """
@@ -74,11 +99,12 @@ def get_player_input(prompt):
     """
     while True:
         choice = input(prompt).strip().lower()
-        if choice == "inventory" or "i":
+        if choice == "inventory" or choice == "i":
             player.view_inventory()
+        elif choice == "quit":
+            quit_game()
         else:
             return choice
-
 
 def intro():
     '''
@@ -95,14 +121,15 @@ def intro():
     print("#                                           #")
     print("#############################################\n\n\n")
     print("Welcome to Young-Do Krienbuehl's Text Adventure Game!")
-    print("You wake up at the entrance of a dark cave. You feel around your pockets for stuff, and find a map, torch, and some gold coins.\n")
+    print("You wake up at the entrance of a dark cave. You feel around your pockets for stuff, and find a map, torch, healing potion, and some gold coins.\n")
     player.add_item("Torch", 1)
     player.add_item("Map", 1)
+    player.add_item("Healing Potion", 1)
     player.add_currency(100)
-    print("Torch, Map, and 100 Gold Coins added to inventory")
+    
     print("You can check your inventory by typing 'inventory' or  'i'. ")
     print("You are at the entrace to a cave. You can either go into the cave or exit and travel north.\n")
-    choice = input("Enter 'Cave' or 'North'. ").strip().lower()
+    choice = get_player_input("Enter 'Cave' or 'North':").strip().lower()
     if choice == "cave":
         cave_interior()
     elif choice == "north":
@@ -110,41 +137,41 @@ def intro():
     else:
         print("That wasn't a valid option. Try again.")
 
-def cave():
-    '''
-    Serves as player first choice of the game. Whether to go into town or try the cave.
-    '''
-    choice = input("").strip().lower()
-    if choice == "enter cave":
-        cave_interior()
-    elif choice == "travel north":
-        village()
-    else:
-        print("That wasn't a valid option. Try again.")
     
-        
-
 def cave_interior():
     '''
     First Section of cave.
+    Player may fight the goblin, flee, or go back to town before engaging.
     '''
-    print("As you travel into the cave you see a couple of skeletons of other adventures that have activated traps here and died." \
-    "")
-    print("You encounter a Goblin dude.")
-    choice = input("you wanna fight or flee bruh?: ").strip().lower()
+    print("You enter the cave and see skeletons of fallen adventurers.")
+    print("A Goblin blocks your path.")
+    choice = get_player_input("you wanna fight or flee bruh?: ").strip().lower()
     if choice == "fight":
         if combat(player, goblin):
             print("You found a Healing Potion on the Goblin!")
             player.add_item("Healing Potion", 1)
-            cave_floor2()
+
+        while True:
+            next_step = get_player_input("Do you want to [continue] deeper or [leave] the cave? ").strip().lower()
+            if next_step == "continue":
+                cave_floor2()
+                break
+            elif next_step == "leave":
+                print("You decide to leave the cave and return to the village.")
+                village()
+                break
+            else:
+                print("Invalid choice. Please type 'continue' or 'leave'.")
         else: 
             print("GAME OVER.")
     elif choice == "flee":
-        print("You flee like a bitch and instead got to the village")
+        print("You flee like a bitch and instead go to the village\n")
         village()
     else:
         print("That wasn't a valid option. Try again.")
-    cave()
+    
+
+
 
 def cave_floor2():
     '''
@@ -153,11 +180,13 @@ def cave_floor2():
     print("As you go deeper into the cave, the ground shakes and the hallway behind you collaspes.")
     print("A statue in front of you comes to life and starts to attack you.")
     if combat(player, golem):
-        print("You found a Healing Potion on the Goblin!")
+        print("You found a Healing Potion on the Golem!")
         player.add_item("Healing Potion", 1)
-        cave_floor2()
+        cave_final_floor()
     else:
         print("GAME OVER")
+
+
 
 def cave_final_floor():
     '''
@@ -179,17 +208,25 @@ def village ():
     print("You arrive at the village of Davontry. the buildings are made of stone and have a distinct european styling to them.")
     print("You hear children playing in the distance, and then a merchant waves at you.")
     print("The merchant greets you: 'Welcome, traveler! I have potions and weapons for your journey.'")
-    choice = input("Do you want the Sword(100)? or Amulet(60)?").strip().lower()
+    choice = get_player_input("Do you want the Sword(100)?, Amulet(60)?, maybe a Healing Potion(20)").strip().lower()
     if choice == "sword":
-        player.add_item("Sword", 1)
+        if player.subtract_currency(100):
+            player.add_item("Sword", 1)
 
     elif choice == "amulet":
-        player.add_item("Amulet", 1)
+        if player.subtract_currency(60):
+            player.add_item("Amulet", 1)
+
+    elif choice == "potion":
+        if player.subtract_currency(20):
+            player.add_item("Healing Potion", 1)
+    
     else:
         print("That wasn't a valid option. Try again.")
+
     print("Cool choice bruh")
-    print("You overhear that a Dragon is guarding some treasure.")
-    choice_2 = input("Do you want to go to the Forest or back to the Cave?").strip().lower()
+    print("You overhear that a Dragon is guarding some treasure in a nearby forest.")
+    choice_2 = get_player_input("Do you want to go to the Forest or back to the Cave?").strip().lower()
     if choice_2 == "forest":
         forest()
     elif choice_2 == "Cave":
@@ -197,42 +234,92 @@ def village ():
     else:
         print("That wasn't a valid option. Try again.")
 
-def forest ():
+
+
+
+def forest():
     '''
-    Player encouters a dragon and has a chance to get treasure. Player is encouraged to go back to cave.
+    Player encounters a dragon and has a chance to get treasure.
+    Afterward, player chooses to go back to the town or cave.
     '''
-    print("You go into the forest and encounter a dragon on your journey")
+    print("You go into the forest and encounter a Dragon on your journey.")
+
     if combat(player, dragon):
         print("You found a Dragon Scale and 200 Gold!")
         player.add_item("Dragon Scale", 1)
         player.add_currency(200)
+
+        # Choice after winning
+        while True:
+            next_move = get_player_input("Do you want to go back to the Village or return to the Cave? ").strip().lower()
+            if next_move == "village":
+                village()
+                break
+            elif next_move == "cave":
+                cave()
+                break
+            else:
+                print("That wasn't a valid option. Please type 'Village' or 'Cave'.")
     else:
         print("GAME OVER")
+
+    
     
 
     
-
 def combat(player, enemy):
     """
     Handles combat and returns True if player wins, False if they die.
+    Item effects:
+        - Sword: +5 player damage and improved hit chance (1-4 hits instead of 1-2)
+        - Amulet: -5 enemy attack (min 0)
     """
     print(f"\nYou encounter a {enemy.name} with {enemy.health} HP!")
 
+    # Initialize defaults
+    bonus_damage = 0
+    damage_reduction = 0
+    hit_range = [1, 2]
+
+    # Stackable effects
+    if "Sword" in player.inventory:
+        bonus_damage += 5
+        hit_range += [3, 4]
+
+    if "Amulet" in player.inventory:
+        damage_reduction += 5
+        hit_range += [5]
+
+    if "Shield" in player.inventory:
+        damage_reduction += 15
+
+    if "Armour" in player.inventory:
+        damage_reduction += 15
+
+    # Remove duplicates and sort hit_range
+    hit_range = sorted(list(set(hit_range)))
+
+
     while enemy.is_alive() and player.hp > 0:
-        input("Press Enter to roll the die... 🎲")
+        action = get_player_input("Type 'roll' to fight or 'potion' to heal: ").strip().lower()
+        if action == "potion":
+            player.use_healing_potion()
+            continue
+
         roll = random.randint(1, 6)
         print(f"You rolled a {roll}!")
 
-        if roll in [1, 2]:
-            damage = 10
+        if roll in hit_range:
+            damage = 10 + bonus_damage
             enemy.health -= damage
             print(f"You hit the {enemy.name} for {damage} damage!")
         else:
             print("You missed!")
 
         if enemy.is_alive():
-            player.hp -= enemy.attack
-            print(f"The {enemy.name} hits you for {enemy.attack} damage!")
+            actual_attack = max(enemy.attack - damage_reduction, 0)
+            player.hp -= actual_attack
+            print(f"The {enemy.name} hits you for {actual_attack} damage!")
 
         print(f"Your HP: {player.hp} | {enemy.name} HP: {enemy.health}\n")
 
@@ -242,6 +329,7 @@ def combat(player, enemy):
     else:
         print(f"You defeated the {enemy.name}!")
         return True
+
 
 
 def get_quote():
